@@ -18,7 +18,7 @@ export default function EditProductPage() {
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<{ slug: string; name: string; url: string }[]>([]);
   const [product, setProduct] = useState<Product | null>(null);
   const [formData, setFormData] = useState({
     title: '',
@@ -40,13 +40,16 @@ export default function EditProductPage() {
         
         setProduct(productData);
         setCategories(cats);
+        // Map product category to slug if it exists in categories, otherwise use as-is
+        const categorySlug = cats.find(cat => cat.name.toLowerCase() === productData.category.toLowerCase() || cat.slug === productData.category)?.slug || productData.category;
+        
         setFormData({
           title: productData.title,
           description: productData.description,
           price: productData.price.toString(),
           stock: productData.stock.toString(),
           brand: productData.brand,
-          category: productData.category,
+          category: categorySlug,
         });
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to fetch product';
@@ -65,7 +68,7 @@ export default function EditProductPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.title || !formData.description || !formData.price || !formData.stock || !formData.brand || !formData.category) {
+    if (!formData.title || !formData.description || !formData.price || !formData.stock || !formData.brand || !formData.category || formData.category === 'none') {
       toast.error('Please fill in all fields');
       return;
     }
@@ -206,14 +209,12 @@ export default function EditProductPage() {
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             required
           >
-            <option value="">Select a category</option>
-            {categories
-              .filter((cat): cat is string => typeof cat === 'string')
-              .map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat.charAt(0).toUpperCase() + cat.slice(1)}
-                </option>
-              ))}
+            <option value="none">Select a category</option>
+            {categories.map((cat) => (
+              <option key={cat.slug} value={cat.slug}>
+                {cat.name}
+              </option>
+            ))}
           </select>
         </div>
 

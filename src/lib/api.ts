@@ -32,6 +32,39 @@ export interface CreateProductData {
   category: string;
 }
 
+export interface Category {
+  slug: string;
+  name: string;
+  url: string;
+}
+
+export interface LoginCredentials {
+  username: string;
+  password: string;
+}
+
+export interface LoginResponse {
+  id: number;
+  username: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  gender: string;
+  image: string;
+  token: string;
+  refreshToken?: string;
+}
+
+export interface RefreshTokenRequest {
+  refreshToken?: string;
+  expiresInMins?: number;
+}
+
+export interface RefreshTokenResponse {
+  accessToken: string;
+  refreshToken: string;
+}
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -40,9 +73,13 @@ const api = axios.create({
 });
 
 export const productApi = {
-  // Get all products with pagination
-  getProducts: async (limit = 10, skip = 0): Promise<ProductsResponse> => {
-    const response = await api.get(`/products?limit=${limit}&skip=${skip}`);
+  // Get all products with pagination and sorting
+  getProducts: async (limit = 10, skip = 0, sortBy?: string, order: 'asc' | 'desc' = 'asc'): Promise<ProductsResponse> => {
+    let url = `/products?limit=${limit}&skip=${skip}`;
+    if (sortBy) {
+      url += `&sortBy=${sortBy}&order=${order}`;
+    }
+    const response = await api.get(url);
     return response.data;
   },
 
@@ -59,12 +96,18 @@ export const productApi = {
   },
 
   // Get all categories
-  getCategories: async (): Promise<string[]> => {
+  getCategories: async (): Promise<Category[]> => {
     const response = await api.get('/products/categories');
-    // Ensure we return an array of strings
+    // Ensure we return an array of Category objects
     const data = response.data;
     if (Array.isArray(data)) {
-      return data.filter((cat): cat is string => typeof cat === 'string');
+      return data.filter((cat): cat is Category => 
+        typeof cat === 'object' && 
+        cat !== null && 
+        'slug' in cat && 
+        'name' in cat && 
+        'url' in cat
+      );
     }
     return [];
   },
@@ -77,19 +120,69 @@ export const productApi = {
 
   // Create product
   createProduct: async (data: CreateProductData): Promise<Product> => {
-    const response = await api.post('/products/add', data);
-    return response.data;
+    try {
+      // Use full URL to ensure correct endpoint
+      const url = `${API_BASE_URL}/products/add`;
+      
+      const response = await axios.post(url, data, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      return response.data;
+    } catch (error: any) {
+      // Log detailed error for debugging
+      console.error('Create product error:', error);
+      if (error.response) {
+        console.error('Error response:', {
+          status: error.response.status,
+          data: error.response.data,
+          url: error.config?.url || `${error.config?.baseURL}${error.config?.url}`,
+        });
+      }
+      throw error;
+    }
   },
 
   // Update product
   updateProduct: async (id: number, data: Partial<CreateProductData>): Promise<Product> => {
-    const response = await api.patch(`/products/${id}`, data);
+    const response = await api.put(`/products/${id}`, data);
     return response.data;
   },
 
   // Delete product
   deleteProduct: async (id: number): Promise<Product> => {
     const response = await api.delete(`/products/${id}`);
+    return response.data;
+  },
+};
+
+export const authApi = {
+  // Login
+  login: async (credentials: LoginCredentials): Promise<LoginResponse> => {
+    const response = await api.post('/auth/login', credentials, {
+      withCredentials: true, // Include cookies
+    });
+    return response.data;
+  },
+  
+  // Refresh token
+  refreshToken: async (refreshToken?: string, expiresInMins: number = 30): Promise<RefreshTokenResponse> => {
+    const url = `${API_BASE_URL}/auth/refresh`;
+    const response = await axios.post(
+      url,
+      {
+        refreshToken,
+        expiresInMins,
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        withCredentials: true, // Include cookies
+      }
+    );
     return response.data;
   },
 };

@@ -45,7 +45,11 @@ export default function ProductCard({ product }: ProductCardProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="absolute top-2 right-2 h-8 w-8 rounded-full bg-background/90 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-background hover:scale-110 shadow-lg"
+              className={`absolute top-2 right-2 h-8 w-8 rounded-full backdrop-blur-sm transition-all duration-300 hover:scale-110 shadow-lg ${
+                isFavorite 
+                  ? 'bg-background/95 opacity-100' 
+                  : 'bg-background/90 opacity-80 group-hover:opacity-100'
+              }`}
               onClick={handleToggleFavorite}
             >
               <Heart
@@ -67,7 +71,7 @@ export default function ProductCard({ product }: ProductCardProps) {
               variant="secondary" 
               className="bg-secondary/50 hover:bg-secondary transition-colors text-xs px-1.5 py-0.5"
             >
-              {product.brand}
+              {product.category}
             </Badge>
             <div className="flex items-center gap-0.5 text-xs font-medium">
               <span className="text-yellow-500">★</span>
